@@ -1,6 +1,6 @@
 # drproj-app
 
-Relief app repository (`obedsayyad/drproj-app`): pnpm workspace (Node 22+, TypeScript strict, Vitest). `docs/` is the `drproj-docs` bundle (git submodule; a local symlink to `../drproj-docs` until the repos are pushed).
+Relief app repository (`obedsayyad/drproj-app`): pnpm workspace (Node 22+, TypeScript strict, Vitest). `docs/` is the `drproj-docs` bundle (git submodule; run `git submodule update --init` after cloning, or clone with `--recurse-submodules`).
 Packages: `apps/relief` (relief API + UI), `packages/contracts`, `database/migrations` (all migrations, ops and app), `tests/integration`. The management API and dashboard live in `drproj-mgmt`.
 
 ## Commands (repo root)

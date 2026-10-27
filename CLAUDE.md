@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-This is `obedsayyad/drproj-app` (public; never commit secrets): the relief app (`apps/relief`, API + React UI), `packages/contracts` (types generated from `docs/spec`), `database/migrations` (all migrations: roles, `ops`, then `app`) and `tests/integration`. `docs/` is the `obedsayyad/drproj-docs` bundle as a git submodule (locally a symlink to `../drproj-docs` until the repos are pushed). The management API/dashboard, Terraform/Ansible, StackStorm, monitoring and k6 live in `obedsayyad/drproj-mgmt`. Plan: docs/docs/11-build-and-demo-plan.md, GitHub repositories.
+This is `obedsayyad/drproj-app` (public; never commit secrets): the relief app (`apps/relief`, API + React UI), `packages/contracts` (types generated from `docs/spec`), `database/migrations` (all migrations: roles, `ops`, then `app`) and `tests/integration`. `docs/` is the `obedsayyad/drproj-docs` bundle as a git submodule; run `git submodule update --init` after cloning. The management API/dashboard, Terraform/Ansible, StackStorm, monitoring and k6 live in `obedsayyad/drproj-mgmt`. Plan: docs/docs/11-build-and-demo-plan.md, GitHub repositories.
 
 Read `docs/CLAUDE.md` (the full implementation brief) first. Commands are in `README.md`: `pnpm typecheck`, `pnpm test`, `pnpm test:integration` (needs `TEST_DATABASE_URL`), single test via `pnpm vitest run <file> -t <name>`. Migrations are shared with `drproj-mgmt` (its tests depend on `database/migrations` by path), so keep them backward compatible and never edit an applied migration.
 
