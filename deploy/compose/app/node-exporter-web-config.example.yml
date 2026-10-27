@@ -1,0 +1,7 @@
+# Copy to node-exporter-web-config.yml (mode 0600). Rendered by Ansible in P5; names only here.
+tls_server_config:
+  cert_file: /etc/node_exporter/tls.crt
+  key_file: /etc/node_exporter/tls.key
+basic_auth_users:
+  # bcrypt hash of NODE_EXPORTER_BASIC_AUTH_PASSWORD:  htpasswd -nBC 12 '' | tr -d ':\n'
+  prometheus: <bcrypt hash>

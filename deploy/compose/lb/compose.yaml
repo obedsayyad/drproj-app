@@ -1,0 +1,44 @@
+# Load-balancer VM stack (docs/08): HAProxy + acme.sh SKELETON only. The real routing config, health
+# checks, maintenance and rate-limit rules, trusted_test_ips.lst and certificate-reload hook arrive in P6.
+# mem_limit values are INITIAL ceilings for the 1 vCPU / 1 GB VM.
+name: drproj-lb
+
+services:
+  haproxy:
+    restart: unless-stopped
+    image: haproxy:${HAPROXY_TAG:-3.2.26-alpine}
+    mem_limit: 256m
+    ports: ["80:80", "443:443", "8404:8404"]
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - lb_certs:/usr/local/etc/haproxy/certs
+      - lb_server_state:/var/lib/haproxy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  acme:
+    restart: unless-stopped
+    image: neilpang/acme.sh:${ACME_SH_TAG:-3.1.6}
+    mem_limit: 64m
+    command: daemon
+    environment:
+      # Staging first (ingress.acme_staging); the issue/deploy hook is P6.
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      ACME_STAGING: ${ACME_STAGING:-true}
+    volumes:
+      - lb_acme:/acme.sh
+      - lb_certs:/certs
+    healthcheck:
+      test: ["CMD", "acme.sh", "--version"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  lb_certs: {}
+  lb_acme: {}
+  lb_server_state: {}

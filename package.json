@@ -1,0 +1,26 @@
+{
+  "name": "drproj-app",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --workspace-concurrency=1 run typecheck",
+    "test": "vitest run --project contracts --project migrations --project relief",
+    "test:integration": "vitest run --project integration",
+    "gen:api": "pnpm --filter @drproj/contracts run gen:api",
+    "migrate": "pnpm --filter @drproj/migrations run migrate",
+    "seed": "pnpm --filter @drproj/relief run seed",
+    "start:relief": "pnpm --filter @drproj/relief run start",
+    "build:web": "pnpm --filter @drproj/relief run build:web"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "openapi-typescript": "7.13.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}
