@@ -52,6 +52,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Config policy (unix-only stats socket, mTLS on non-public binds)
+        run: python3 deploy/compose/lb/check_config.py deploy/compose/lb/haproxy/haproxy.cfg
       - name: haproxy -c with throwaway material
         run: |
           set -eu
