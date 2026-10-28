@@ -61,7 +61,7 @@ jobs:
           cp deploy/compose/lb/haproxy/trusted_test_ips.lst.example "$d/trusted_test_ips.lst"
           h=deploy/compose/lb/haproxy
           mkdir -p "$d/conf" "$d/certs"
-          cp -R "$h/errors" "$d/conf/errors"; cp "$h/haproxy.cfg" "$d/conf/"; cp "$d/ca-bundle.crt" "$d/trusted_test_ips.lst" "$d/conf/"
+          cp -R "$h/errors" "$d/conf/errors"; cp "$h/haproxy.cfg" "$h/admin_allow.regex" "$d/conf/"; cp "$d/ca-bundle.crt" "$d/trusted_test_ips.lst" "$d/conf/"
           cp "$d/app.pem" "$d/lb-admin.pem" "$d/certs/"
           docker run --rm --add-host acme:127.0.0.1 \
             -e PRIMARY_ADDR=10.0.0.1:8443 -e APP_HOST=app.example -e HAPROXY_STATS_USER=ci -e HAPROXY_STATS_PASSWORD=ci \
