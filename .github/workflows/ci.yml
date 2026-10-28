@@ -47,6 +47,27 @@ jobs:
       - run: pnpm test
       - run: pnpm test:integration
 
+  haproxy-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: haproxy -c with throwaway material
+        run: |
+          set -eu
+          d=$(mktemp -d)
+          openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout "$d/k.pem" -out "$d/c.pem" -subj /CN=ci -days 1
+          cat "$d/c.pem" "$d/k.pem" > "$d/app.pem"; cp "$d/app.pem" "$d/lb-admin.pem"; cp "$d/c.pem" "$d/ca-bundle.crt"
+          cp deploy/compose/lb/haproxy/trusted_test_ips.lst.example "$d/trusted_test_ips.lst"
+          h=deploy/compose/lb/haproxy
+          mkdir -p "$d/conf" "$d/certs"
+          cp -R "$h/errors" "$d/conf/errors"; cp "$h/haproxy.cfg" "$d/conf/"; cp "$d/ca-bundle.crt" "$d/trusted_test_ips.lst" "$d/conf/"
+          cp "$d/app.pem" "$d/lb-admin.pem" "$d/certs/"
+          docker run --rm --add-host acme:127.0.0.1 \
+            -e PRIMARY_ADDR=10.0.0.1:8443 -e APP_HOST=app.example -e HAPROXY_STATS_USER=ci -e HAPROXY_STATS_PASSWORD=ci \
+            -v "$d/conf:/usr/local/etc/haproxy/conf:ro" -v "$d/certs:/usr/local/etc/haproxy/certs:ro" \
+            haproxy:3.2.26-alpine haproxy -c -f /usr/local/etc/haproxy/conf/haproxy.cfg
+
   image:
     needs: test
     runs-on: ubuntu-latest
