@@ -27,7 +27,7 @@ describe.skipIf(!url)('migrations (real Postgres)', () => {
 
   it('applies both tracks on a fresh database, then is a no-op', async () => {
     const first = await runMigrations({ connectionString: url! });
-    expect(first.applied).toEqual(['ops/0001_roles.sql', 'ops/0002_ops_schema.sql', 'ops/0003_ops_api.sql', 'ops/0004_maintenance_admission.sql', 'ops/0005_operation_event_envelope.sql', 'ops/0006_operation_idempotency_scope.sql', 'ops/0007_keepalive_runs.sql', 'ops/0008_processed_events_source.sql', 'ops/0009_capacity_control.sql', 'ops/0010_lease_takeover_attempt_grants.sql', 'ops/0011_provisioning_intents.sql', 'ops/0012_reconcile_failover.sql', 'ops/0013_standby_policy.sql', 'ops/0014_register_fixed_instance.sql', 'app/0001_app_schema.sql', 'app/0002_runtime_readiness_grant.sql']);
+    expect(first.applied).toEqual(['ops/0001_roles.sql', 'ops/0002_ops_schema.sql', 'ops/0003_ops_api.sql', 'ops/0004_maintenance_admission.sql', 'ops/0005_operation_event_envelope.sql', 'ops/0006_operation_idempotency_scope.sql', 'ops/0007_keepalive_runs.sql', 'ops/0008_processed_events_source.sql', 'ops/0009_capacity_control.sql', 'ops/0010_lease_takeover_attempt_grants.sql', 'ops/0011_provisioning_intents.sql', 'ops/0012_reconcile_failover.sql', 'ops/0013_standby_policy.sql', 'ops/0014_register_fixed_instance.sql', 'ops/0015_haproxy_routing.sql', 'app/0001_app_schema.sql', 'app/0002_runtime_readiness_grant.sql']);
     expect((await runMigrations({ connectionString: url! })).applied).toEqual([]);
   });
 
@@ -35,7 +35,7 @@ describe.skipIf(!url)('migrations (real Postgres)', () => {
     await q('DROP SCHEMA app CASCADE');
     await q('DROP SCHEMA ops CASCADE');
     const results = await Promise.all([1, 2, 3].map(() => runMigrations({ connectionString: url! })));
-    expect(results.flatMap((r) => r.applied)).toHaveLength(16);
+    expect(results.flatMap((r) => r.applied)).toHaveLength(17);
   });
 
   it('aborts when an applied migration was modified', async () => {
