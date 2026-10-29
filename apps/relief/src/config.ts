@@ -17,7 +17,8 @@ const Env = z.object({
   // Display-only identity (docs/06): friendly name and place of this instance. No addresses, no secrets.
   INSTANCE_ROLE: z.enum(['primary', 'warm', 'elastic']).optional(),
   INSTANCE_PROVIDER: z.enum(['self_hosted', 'digitalocean', 'linode']).optional(),
-  INSTANCE_REGION: z.string().regex(/^[\p{L}\p{N} ()._,-]{1,80}$/u).optional(),
+  // Empty = unknown (the deploy-time location lookup failed): shown as just "self-hosted", never guessed.
+  INSTANCE_REGION: z.preprocess((v) => (v === '' ? undefined : v), z.string().regex(/^[\p{L}\p{N} ()._,-]{1,80}$/u).optional()),
   INSTANCE_LABEL: z.string().regex(/^[\p{L}\p{N} ()._,-]{1,48}$/u).optional(),
   APP_VERSION: z.string().regex(/^[A-Za-z0-9._+-]{1,64}$/).default('dev'),
   DEMO_MODE: bool.default(false),

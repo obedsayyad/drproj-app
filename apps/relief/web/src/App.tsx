@@ -12,7 +12,7 @@ import {
 import { DetailPanel } from './DetailPanel';
 import { NewRequestForm } from './NewRequestForm';
 import { RequestList } from './RequestList';
-import { RESOURCES, STATUSES, URGENCIES } from './labels';
+import { describeInstance, RESOURCES, STATUSES, URGENCIES } from './labels';
 
 export function App() {
   const [filters, setFilters] = useState<Filters>({});
@@ -173,14 +173,6 @@ function useServedBy(): Instance | null {
     };
   }, []);
   return id;
-}
-
-const PROVIDER_NAMES: Record<string, string> = { digitalocean: 'DigitalOcean', linode: 'Linode' };
-/** "Main server · self-hosted (Pune DC)", "Backup server · DigitalOcean fra1 (Frankfurt)"; the raw instance id stays in the tooltip. */
-function describeInstance(i: Instance): string {
-  if (!i.label) return i.id;
-  const where = i.provider && i.provider in PROVIDER_NAMES ? `${PROVIDER_NAMES[i.provider]} ${i.region ?? ''}`.trim() : i.region;
-  return where ? `${i.label} · ${where}` : i.label;
 }
 
 function ServedBy({ instance }: { instance: Instance | null }) {

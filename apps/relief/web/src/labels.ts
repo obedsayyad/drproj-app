@@ -44,3 +44,19 @@ export function ago(iso: string, now = Date.now()): string {
 }
 export const when = (iso: string) =>
   new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+const PROVIDER_NAMES: Record<string, string> = { digitalocean: 'DigitalOcean', linode: 'Linode' };
+/**
+ * "Main server · self-hosted · Pune, IN" (city from the deploy-time lookup; just "self-hosted" when it failed),
+ * "Backup server · DigitalOcean fra1 (Frankfurt)". The raw instance id stays in the tooltip.
+ */
+export function describeInstance(i: { id: string; label: string | null; provider: string | null; region: string | null }): string {
+  if (!i.label) return i.id;
+  const where =
+    i.provider === 'self_hosted'
+      ? ['self-hosted', i.region].filter(Boolean).join(' · ')
+      : i.provider && i.provider in PROVIDER_NAMES
+        ? `${PROVIDER_NAMES[i.provider]} ${i.region ?? ''}`.trim()
+        : i.region;
+  return where ? `${i.label} · ${where}` : i.label;
+}
