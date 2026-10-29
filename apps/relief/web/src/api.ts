@@ -31,7 +31,13 @@ export class ApiError extends Error {
   }
 }
 
-type Listener = (instanceId: string) => void;
+export interface Instance {
+  id: string;
+  label: string | null;
+  provider: string | null;
+  region: string | null;
+}
+type Listener = (instance: Instance) => void;
 const listeners = new Set<Listener>();
 /** Every response names the server that answered (X-Instance-Id). */
 export const onInstance = (l: Listener) => {
@@ -47,7 +53,18 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(0, 'NETWORK', 'Could not reach the server. Check your connection and try again.', null);
   }
   const instance = res.headers.get('x-instance-id');
-  if (instance) listeners.forEach((l) => l(instance));
+  if (instance) {
+    const h = (n: string) => {
+      const v = res.headers.get(n);
+      try {
+        return v ? decodeURIComponent(v) : null;
+      } catch {
+        return null;
+      }
+    };
+    const who: Instance = { id: instance, label: h('x-instance-label'), provider: res.headers.get('x-instance-provider'), region: h('x-instance-region') };
+    listeners.forEach((l) => l(who));
+  }
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     const p = (body ?? {}) as { code?: string; detail?: string; title?: string };

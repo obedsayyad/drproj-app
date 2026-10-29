@@ -6,6 +6,7 @@ import {
   onInstance,
   ping,
   type Filters,
+  type Instance,
   type ReliefRequest,
 } from './api';
 import { DetailPanel } from './DetailPanel';
@@ -159,8 +160,8 @@ function Select(props: {
 }
 
 /** Tracks which server answered last; pings liveness so failover is visible without clicking. */
-function useServedBy(): string | null {
-  const [id, setId] = useState<string | null>(null);
+function useServedBy(): Instance | null {
+  const [id, setId] = useState<Instance | null>(null);
   useEffect(() => {
     const off = onInstance(setId);
     const tick = () => void ping().catch(() => undefined);
@@ -174,22 +175,33 @@ function useServedBy(): string | null {
   return id;
 }
 
-function ServedBy({ instance }: { instance: string | null }) {
+const PROVIDER_NAMES: Record<string, string> = { digitalocean: 'DigitalOcean', linode: 'Linode' };
+/** "Main server · self-hosted (Pune DC)", "Backup server · DigitalOcean fra1 (Frankfurt)"; the raw instance id stays in the tooltip. */
+function describeInstance(i: Instance): string {
+  if (!i.label) return i.id;
+  const where = i.provider && i.provider in PROVIDER_NAMES ? `${PROVIDER_NAMES[i.provider]} ${i.region ?? ''}`.trim() : i.region;
+  return where ? `${i.label} · ${where}` : i.label;
+}
+
+function ServedBy({ instance }: { instance: Instance | null }) {
   const [flash, setFlash] = useState(false);
   const prev = useRef<string | null>(null);
+  const id = instance?.id ?? null;
   useEffect(() => {
-    if (prev.current && instance && prev.current !== instance) {
+    if (prev.current && id && prev.current !== id) {
       setFlash(true);
       const t = setTimeout(() => setFlash(false), 1200);
-      prev.current = instance;
+      prev.current = id;
       return () => clearTimeout(t);
     }
-    prev.current = instance;
-  }, [instance]);
+    prev.current = id;
+  }, [id]);
   return (
     <div className={`served ${flash ? 'served-changed' : ''}`} aria-live="polite">
-      <span className="served-label">Answered by</span>
-      <span className="served-id">{instance ?? 'connecting…'}</span>
+      <span className="served-label">Answered by:</span>
+      <span className="served-id" title={instance ? `Instance ${instance.id}` : undefined}>
+        {instance ? describeInstance(instance) : 'connecting…'}
+      </span>
     </div>
   );
 }

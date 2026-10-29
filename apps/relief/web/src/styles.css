@@ -46,7 +46,7 @@ button, input, select { font: inherit; color: inherit; }
 }
 .served-label { font-size: 0.8rem; color: #a9bccb; }
 .served-id {
-  font: 700 1.9rem/1.05 var(--display);
+  font: 700 1.2rem/1.15 var(--display);
   font-stretch: 70%;
   overflow-wrap: anywhere;
 }

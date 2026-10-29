@@ -14,6 +14,11 @@ const Env = z.object({
   // Policy runtime.app_db_pool_max is 1..5; larger values are clamped (warned), not rejected.
   APP_DB_POOL_MAX: z.coerce.number().int().default(2),
   INSTANCE_ID: z.string().regex(/^[A-Za-z0-9._-]{1,64}$/).default('local'),
+  // Display-only identity (docs/06): friendly name and place of this instance. No addresses, no secrets.
+  INSTANCE_ROLE: z.enum(['primary', 'warm', 'elastic']).optional(),
+  INSTANCE_PROVIDER: z.enum(['self_hosted', 'digitalocean', 'linode']).optional(),
+  INSTANCE_REGION: z.string().regex(/^[\p{L}\p{N} ()._,-]{1,80}$/u).optional(),
+  INSTANCE_LABEL: z.string().regex(/^[\p{L}\p{N} ()._,-]{1,48}$/u).optional(),
   APP_VERSION: z.string().regex(/^[A-Za-z0-9._+-]{1,64}$/).default('dev'),
   DEMO_MODE: bool.default(false),
   DEMO_DEFAULT_WORK_MS: z.coerce.number().int().min(1).max(250).default(100),
@@ -36,6 +41,7 @@ export interface Config {
   tls: { certFile: string; keyFile: string } | null;
   dbPoolMax: number;
   instanceId: string;
+  instance: { role: string | null; provider: string | null; region: string | null; label: string | null };
   appVersion: string;
   demo: { enabled: boolean; defaultWorkMs: number; maxWorkMs: number; maxWorkers: number; maxQueued: number };
   maintenanceRetryAfterSeconds: number;
@@ -69,6 +75,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     tls: e.APP_TLS_CERT_FILE && e.APP_TLS_KEY_FILE ? { certFile: e.APP_TLS_CERT_FILE, keyFile: e.APP_TLS_KEY_FILE } : null,
     dbPoolMax: e.APP_DB_POOL_MAX,
     instanceId: e.INSTANCE_ID,
+    instance: { role: e.INSTANCE_ROLE ?? null, provider: e.INSTANCE_PROVIDER ?? null, region: e.INSTANCE_REGION ?? null, label: e.INSTANCE_LABEL ?? null },
     appVersion: e.APP_VERSION,
     demo: {
       enabled: e.DEMO_MODE,

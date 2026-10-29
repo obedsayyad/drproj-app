@@ -66,6 +66,11 @@ export function createApp({ config, pool, metrics, workload, webDir }: Deps): ex
   // Identity + security headers + metrics on every response, including errors.
   app.use((req, res, next) => {
     res.setHeader('X-Instance-Id', config.instanceId);
+    const { role, provider, region, label } = config.instance;
+    if (role) res.setHeader('X-Instance-Role', role);
+    if (provider) res.setHeader('X-Instance-Provider', provider);
+    if (region) res.setHeader('X-Instance-Region', encodeURIComponent(region));
+    if (label) res.setHeader('X-Instance-Label', encodeURIComponent(label));
     res.setHeader('X-App-Version', config.appVersion);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -87,6 +92,10 @@ export function createApp({ config, pool, metrics, workload, webDir }: Deps): ex
       }
     });
     next();
+  });
+
+  app.get('/api/instance', (_req, res) => {
+    res.json({ instance_id: config.instanceId, ...config.instance, version: config.appVersion });
   });
 
   // Liveness first: no database, no rate limit (HAProxy checks only this).
