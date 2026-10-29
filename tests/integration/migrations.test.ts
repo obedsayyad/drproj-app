@@ -35,7 +35,7 @@ describe.skipIf(!url)('migrations (real Postgres)', () => {
     await q('DROP SCHEMA app CASCADE');
     await q('DROP SCHEMA ops CASCADE');
     const results = await Promise.all([1, 2, 3].map(() => runMigrations({ connectionString: url! })));
-    expect(results.flatMap((r) => r.applied)).toHaveLength(17);
+    expect(results.flatMap((r) => r.applied)).toHaveLength(18);
   });
 
   it('aborts when an applied migration was modified', async () => {
