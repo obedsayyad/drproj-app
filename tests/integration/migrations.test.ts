@@ -122,23 +122,27 @@ describe.skipIf(!url)('migrations (real Postgres)', () => {
       await expect(q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, d2, '1.0.0', 'rev-1'])).rejects.toThrow(/permission denied/);
     });
     await q('BEGIN');
-    await q('SET LOCAL ROLE dr_automation');
-    await q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, d2, '1.0.0', 'rev-1']);
-    await q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, d2, '1.0.0', 'rev-1']);
-    await q('SAVEPOINT s');
-    await expect(q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, 'sha256:xyz', '1.0.0', 'rev-1'])).rejects.toThrow(/bad_argument/);
-    await q('ROLLBACK TO s');
-    await expect(q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', ['00000000-0000-0000-0000-000000000000', d2, '1.0.0', 'rev-1'])).rejects.toThrow(/unknown_instance/);
-    await q('ROLLBACK TO s');
-    await q('RESET ROLE');
-    const row = (await q('SELECT image_digest, configuration_revision, last_seen_at IS NOT NULL AS seen FROM ops.instances WHERE id = $1', [id])).rows[0];
-    expect(row).toEqual({ image_digest: d2, configuration_revision: 'rev-1', seen: true });
-    const audit = (await q(`SELECT old_value, new_value FROM ops.audit_events WHERE action = 'instance.deploy_recorded' AND object = $1 ORDER BY occurred_at, id`, ['instance:' + id])).rows;
-    expect(audit).toHaveLength(2);
-    expect(audit[0].old_value.image_digest).toBe(d1);
-    expect(audit[1].new_value).toMatchObject({ image_digest: d2, app_version: '1.0.0' });
-    await q('ROLLBACK');
-    await q('DELETE FROM ops.instances WHERE id = $1', [id]);
+    try {
+      await q('SET LOCAL ROLE dr_automation');
+      await q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, d2, '1.0.0', 'rev-1']);
+      await q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, d2, '1.0.0', 'rev-1']);
+      await q('SAVEPOINT s');
+      await expect(q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, 'sha256:xyz', '1.0.0', 'rev-1'])).rejects.toThrow(/bad_argument/);
+      await q('ROLLBACK TO s');
+      await expect(q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', ['00000000-0000-0000-0000-000000000000', d2, '1.0.0', 'rev-1'])).rejects.toThrow(/unknown_instance/);
+      await q('ROLLBACK TO s');
+      await q('RESET ROLE');
+      const row = (await q('SELECT image_digest, configuration_revision, last_seen_at IS NOT NULL AS seen FROM ops.instances WHERE id = $1', [id])).rows[0];
+      expect(row).toEqual({ image_digest: d2, configuration_revision: 'rev-1', seen: true });
+      // both calls share one transaction timestamp, so order by the digest each one replaced
+      const audit = (await q(`SELECT old_value, new_value FROM ops.audit_events WHERE action = 'instance.deploy_recorded' AND object = $1 ORDER BY old_value ->> 'image_digest'`, ['instance:' + id])).rows;
+      expect(audit).toHaveLength(2);
+      expect(audit[0].old_value.image_digest).toBe(d1);
+      expect(audit[1].new_value).toMatchObject({ image_digest: d2, app_version: '1.0.0' });
+    } finally {
+      await q('ROLLBACK');
+      await q('DELETE FROM ops.instances WHERE id = $1', [id]);
+    }
   });
 
   it('re-applies only the app track after the app schema is replaced; ops data survives', async () => {
