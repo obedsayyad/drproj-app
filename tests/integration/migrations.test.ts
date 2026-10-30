@@ -27,7 +27,7 @@ describe.skipIf(!url)('migrations (real Postgres)', () => {
 
   it('applies both tracks on a fresh database, then is a no-op', async () => {
     const first = await runMigrations({ connectionString: url! });
-    expect(first.applied).toEqual(['ops/0001_roles.sql', 'ops/0002_ops_schema.sql', 'ops/0003_ops_api.sql', 'ops/0004_maintenance_admission.sql', 'ops/0005_operation_event_envelope.sql', 'ops/0006_operation_idempotency_scope.sql', 'ops/0007_keepalive_runs.sql', 'ops/0008_processed_events_source.sql', 'ops/0009_capacity_control.sql', 'ops/0010_lease_takeover_attempt_grants.sql', 'ops/0011_provisioning_intents.sql', 'ops/0012_reconcile_failover.sql', 'ops/0013_standby_policy.sql', 'ops/0014_register_fixed_instance.sql', 'ops/0015_haproxy_routing.sql', 'ops/0016_haproxy_command_intent.sql', 'ops/0017_test_run_projection.sql', 'app/0001_app_schema.sql', 'app/0002_runtime_readiness_grant.sql']);
+    expect(first.applied).toEqual(['ops/0001_roles.sql', 'ops/0002_ops_schema.sql', 'ops/0003_ops_api.sql', 'ops/0004_maintenance_admission.sql', 'ops/0005_operation_event_envelope.sql', 'ops/0006_operation_idempotency_scope.sql', 'ops/0007_keepalive_runs.sql', 'ops/0008_processed_events_source.sql', 'ops/0009_capacity_control.sql', 'ops/0010_lease_takeover_attempt_grants.sql', 'ops/0011_provisioning_intents.sql', 'ops/0012_reconcile_failover.sql', 'ops/0013_standby_policy.sql', 'ops/0014_register_fixed_instance.sql', 'ops/0015_haproxy_routing.sql', 'ops/0016_haproxy_command_intent.sql', 'ops/0017_test_run_projection.sql', 'ops/0018_record_instance_deploy.sql', 'app/0001_app_schema.sql', 'app/0002_runtime_readiness_grant.sql']);
     expect((await runMigrations({ connectionString: url! })).applied).toEqual([]);
   });
 
@@ -35,7 +35,7 @@ describe.skipIf(!url)('migrations (real Postgres)', () => {
     await q('DROP SCHEMA app CASCADE');
     await q('DROP SCHEMA ops CASCADE');
     const results = await Promise.all([1, 2, 3].map(() => runMigrations({ connectionString: url! })));
-    expect(results.flatMap((r) => r.applied)).toHaveLength(19);
+    expect(results.flatMap((r) => r.applied)).toHaveLength(20);
   });
 
   it('aborts when an applied migration was modified', async () => {
@@ -107,6 +107,38 @@ describe.skipIf(!url)('migrations (real Postgres)', () => {
     } finally {
       await q('ROLLBACK');
     }
+  });
+
+  it('records a deploy for dr_automation only, idempotently, with an audit row (ops/0018)', async () => {
+    const d1 = 'sha256:' + 'a'.repeat(64);
+    const d2 = 'sha256:' + 'b'.repeat(64);
+    const id = (await q(`INSERT INTO ops.instances (provider, provider_resource_id, role, image_digest, lifecycle_state)
+      VALUES ('self_hosted', 'rid-0018', 'primary', $1, 'ready') RETURNING id`, [d1])).rows[0].id;
+    const asRole = async (role: string, fn: () => Promise<void>) => {
+      await q('BEGIN');
+      try { await q(`SET LOCAL ROLE ${role}`); await fn(); } finally { await q('ROLLBACK'); }
+    };
+    await asRole('dr_ops', async () => {
+      await expect(q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, d2, '1.0.0', 'rev-1'])).rejects.toThrow(/permission denied/);
+    });
+    await q('BEGIN');
+    await q('SET LOCAL ROLE dr_automation');
+    await q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, d2, '1.0.0', 'rev-1']);
+    await q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, d2, '1.0.0', 'rev-1']);
+    await q('SAVEPOINT s');
+    await expect(q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', [id, 'sha256:xyz', '1.0.0', 'rev-1'])).rejects.toThrow(/bad_argument/);
+    await q('ROLLBACK TO s');
+    await expect(q('SELECT ops.record_instance_deploy($1, $2, $3, $4)', ['00000000-0000-0000-0000-000000000000', d2, '1.0.0', 'rev-1'])).rejects.toThrow(/unknown_instance/);
+    await q('ROLLBACK TO s');
+    await q('RESET ROLE');
+    const row = (await q('SELECT image_digest, configuration_revision, last_seen_at IS NOT NULL AS seen FROM ops.instances WHERE id = $1', [id])).rows[0];
+    expect(row).toEqual({ image_digest: d2, configuration_revision: 'rev-1', seen: true });
+    const audit = (await q(`SELECT old_value, new_value FROM ops.audit_events WHERE action = 'instance.deploy_recorded' AND object = $1 ORDER BY occurred_at, id`, ['instance:' + id])).rows;
+    expect(audit).toHaveLength(2);
+    expect(audit[0].old_value.image_digest).toBe(d1);
+    expect(audit[1].new_value).toMatchObject({ image_digest: d2, app_version: '1.0.0' });
+    await q('ROLLBACK');
+    await q('DELETE FROM ops.instances WHERE id = $1', [id]);
   });
 
   it('re-applies only the app track after the app schema is replaced; ops data survives', async () => {
